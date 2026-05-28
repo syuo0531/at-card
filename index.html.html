@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AT試験 単語帳</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#0f0f0f; --surface:#1a1a1a; --surface2:#242424;
+    --border:#2e2e2e; --accent:#c8f07a;
+    --text:#e8e8e8; --muted:#888;
+    --ok:#7af0a0; --ng:#f07a7a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+  header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10;gap:6px;}
+  .logo{font-family:'DM Mono',monospace;font-size:13px;letter-spacing:.08em;color:var(--accent);flex-shrink:0;}
+  .tabs{display:flex;gap:4px;}
+  .tab{padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap;}
+  .tab.on{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700;}
+  .upbtn{padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap;}
+  .upbtn:hover{border-color:var(--accent);color:var(--accent);}
+
+  #year-bar{display:none;width:100%;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg);overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #year-bar.visible{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;}
+  #subject-bar{display:none;width:100%;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #subject-bar.visible{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;}
+  .ybtn{padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Mono',monospace;white-space:nowrap;transition:all .2s;flex-shrink:0;}
+  .ybtn.on{background:var(--surface2);color:var(--text);border-color:var(--text);}
+  .sbtn{padding:4px 10px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Mono',monospace;white-space:nowrap;transition:all .2s;flex-shrink:0;}
+  .sbtn.on{background:rgba(200,240,122,.15);color:var(--accent);border-color:rgba(200,240,122,.4);}
+  .ylabel{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);flex-shrink:0;margin-right:4px;}
+
+  main{flex:1;display:flex;flex-direction:column;align-items:center;padding:24px 16px 40px;gap:16px;max-width:640px;width:100%;margin:0 auto;}
+
+  .sbar{display:flex;gap:14px;width:100%;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);flex-wrap:wrap;}
+  .sbar span{color:var(--text);font-weight:500;}
+  .sbar .ng span{color:var(--ng);}
+  .pbar{width:100%;height:2px;background:var(--border);border-radius:1px;overflow:hidden;}
+  .pfill{height:100%;background:var(--accent);border-radius:1px;transition:width .3s;}
+
+  .cwrap{width:100%;perspective:1000px;}
+  .card{width:100%;min-height:230px;position:relative;transform-style:preserve-3d;transition:transform .4s cubic-bezier(.4,0,.2,1);cursor:pointer;}
+  .card.flip{transform:rotateY(180deg);}
+  .face{position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;border:1px solid var(--border);padding:22px 22px 18px;display:flex;flex-direction:column;justify-content:space-between;}
+  .front{background:var(--surface);}
+  .back{background:var(--surface2);transform:rotateY(180deg);}
+  .cmeta{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;}
+  .cq{font-size:15px;line-height:1.8;flex:1;}
+  .chint{font-size:11px;color:var(--muted);text-align:center;margin-top:14px;}
+  .verdict{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;margin-bottom:10px;}
+  .vok{background:rgba(122,240,160,.15);color:var(--ok);}
+  .vng{background:rgba(240,122,122,.15);color:var(--ng);}
+  .cans{font-size:14px;line-height:1.8;flex:1;}
+
+  .card-img-wrap{width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface);position:relative;}
+  .card-img-wrap img{width:100%;display:block;max-height:260px;object-fit:contain;background:#111;}
+  .img-del-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);color:var(--ng);border:1px solid var(--ng);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit;}
+  .img-add-btn{width:100%;padding:10px;border-radius:10px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center;}
+  .img-add-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  .arow{display:flex;gap:10px;width:100%;}
+  .btn{flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);font-family:inherit;font-size:14px;cursor:pointer;font-weight:500;transition:all .15s;}
+  .bng{background:rgba(240,122,122,.1);color:var(--ng);border-color:rgba(240,122,122,.3);}
+  .bng:hover{background:rgba(240,122,122,.2);}
+  .bok{background:rgba(122,240,160,.1);color:var(--ok);border-color:rgba(122,240,160,.3);}
+  .bok:hover{background:rgba(122,240,160,.2);}
+  .bmuted{background:var(--surface2);color:var(--muted);border-color:var(--border);}
+  .bmuted:hover{color:var(--text);}
+  .baccent{background:rgba(200,240,122,.15);color:var(--accent);border-color:rgba(200,240,122,.4);font-size:13px;}
+  .baccent:hover{background:rgba(200,240,122,.25);}
+
+  /* 再開プロンプト */
+  .resume-box{
+    width:100%;background:var(--surface);border:1px solid var(--accent);
+    border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px;
+  }
+  .resume-box h3{font-size:15px;color:var(--accent);}
+  .resume-box p{font-size:13px;color:var(--muted);line-height:1.6;}
+
+  .dropz{width:100%;border:2px dashed var(--border);border-radius:16px;padding:50px 24px;text-align:center;cursor:pointer;transition:border-color .2s;color:var(--muted);font-size:13px;line-height:1.8;}
+  .dropz:hover,.dropz.over{border-color:var(--accent);color:var(--accent);}
+  .dropz .ico{font-size:36px;margin-bottom:14px;}
+
+  .stitle{width:100%;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:.06em;}
+  .wlist{width:100%;display:flex;flex-direction:column;gap:8px;}
+  .witem{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.6;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .wcnt{font-family:'DM Mono',monospace;font-size:11px;color:var(--ng);white-space:nowrap;padding-top:2px;}
+
+  .done{text-align:center;padding:30px 20px;width:100%;}
+  .done .big{font-family:'DM Mono',monospace;font-size:52px;color:var(--accent);line-height:1;margin-bottom:6px;}
+  .done h2{font-size:18px;margin-bottom:6px;}
+  .done p{color:var(--muted);font-size:13px;margin-bottom:20px;}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty h2{font-size:16px;margin-bottom:8px;color:var(--text);}
+  .empty p{font-size:13px;line-height:1.7;}
+
+  /* ── STATS ── */
+  .stats-wrap{width:100%;display:flex;flex-direction:column;gap:14px;}
+  .stat-overview{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:100%;}
+  .stat-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 10px;text-align:center;}
+  .stat-box .val{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;line-height:1;margin-bottom:4px;}
+  .stat-box .lbl{font-size:10px;color:var(--muted);}
+  .stat-box.s-accent .val{color:var(--accent);}
+  .stat-box.s-ng .val{color:var(--ng);}
+  .stat-box.s-ok .val{color:var(--ok);}
+  .stats-section-title{width:100%;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;padding-bottom:6px;border-bottom:1px solid var(--border);}
+
+  /* 年度別テーブル */
+  .year-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .year-table th{
+    font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);
+    padding:6px 10px;text-align:right;font-weight:400;border-bottom:1px solid var(--border);
+  }
+  .year-table th:first-child{text-align:left;}
+  .year-table td{
+    padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:middle;
+  }
+  .year-table td:first-child{font-weight:500;font-size:13px;}
+  .year-table td:not(:first-child){text-align:right;font-family:'DM Mono',monospace;font-size:12px;}
+  .year-table tr:last-child td{border-bottom:none;}
+
+  .mini-bar{width:60px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px;}
+  .mini-fill{height:100%;border-radius:3px;}
+  .c-good{color:var(--ok);}
+  .c-mid{color:var(--accent);}
+  .c-bad{color:var(--ng);}
+  .c-none{color:var(--muted);}
+  .bg-good{background:var(--ok);}
+  .bg-mid{background:var(--accent);}
+  .bg-bad{background:var(--ng);}
+  .bg-none{background:var(--muted);}
+
+  #fi{display:none;}
+  #img-fi{display:none;}
+  @media(max-width:400px){.logo{display:none;}.cq{font-size:14px;}.stat-box .val{font-size:20px;}.mini-bar{width:40px;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">AT_FLASH</div>
+  <div class="tabs">
+    <button class="tab on"  id="t-all"   onclick="switchMode('all')">全問</button>
+    <button class="tab"     id="t-weak"  onclick="switchMode('weak')">苦手</button>
+    <button class="tab"     id="t-stats" onclick="switchMode('stats')">📊</button>
+  </div>
+  <button class="upbtn" onclick="document.getElementById('fi').click()">CSV追加</button>
+  <input type="file" id="fi" accept=".csv" multiple>
+  <input type="file" id="img-fi" accept="image/*">
+  <input type="file" id="import-fi" accept=".json">
+</header>
+
+<div id="year-bar"></div>
+<div id="subject-bar"></div>
+<main id="M">
+  <div class="dropz" id="dz">
+    <div class="ico">📂</div>
+    CSVをドロップ、または「CSV追加」から読み込む<br>
+    <span style="font-size:11px">複数ファイル同時OK / 年度フィルター・統計対応</span>
+  </div>
+</main>
+
+<script>
+var allCards=[], session=[], idx=0, flipped=false, answered=false;
+var mode='all', selectedYear='all';
+var wrongMap={}, imageMap={}, answeredMap={};
+var selectedSubject='all';
+
+// セッション進捗保存
+var savedSession={};  // {keys:[], idx:N, year:str, mode:str}
+
+function saveW(){try{localStorage.setItem('atf_w6',JSON.stringify(wrongMap));}catch(e){}}
+function loadW(){try{var d=localStorage.getItem('atf_w6');if(d)wrongMap=JSON.parse(d);}catch(e){}}
+function saveA(){try{localStorage.setItem('atf_a6',JSON.stringify(answeredMap));}catch(e){}}
+function loadA(){try{var d=localStorage.getItem('atf_a6');if(d)answeredMap=JSON.parse(d);}catch(e){}}
+function saveSession(){
+  try{
+    localStorage.setItem('atf_sess6',JSON.stringify({
+      keys:session.map(function(c){return c.front;}),
+      idx:idx, year:selectedYear, mode:mode
+    }));
+  }catch(e){}
+}
+function loadSession(){
+  try{var d=localStorage.getItem('atf_sess6');if(d)savedSession=JSON.parse(d);}catch(e){}
+}
+function clearSession(){
+  savedSession={};
+  try{localStorage.removeItem('atf_sess6');}catch(e){}
+}
+
+var db=null;
+function openDB(cb){
+  if(db){cb();return;}
+  var req=indexedDB.open('atflash_v7',2);
+  req.onupgradeneeded=function(e){
+    var d=e.target.result;
+    if(!d.objectStoreNames.contains('imgs'))d.createObjectStore('imgs');
+    if(!d.objectStoreNames.contains('csvs'))d.createObjectStore('csvs');
+  };
+  req.onsuccess=function(e){db=e.target.result;cb();};
+  req.onerror=function(){cb();};
+}
+
+// CSV永続保存：年度をキーにカード配列をJSON保存
+function saveCSVs(){
+  openDB(function(){
+    var years={};
+    allCards.forEach(function(c){
+      if(!years[c.year])years[c.year]=[];
+      years[c.year].push(c);
+    });
+    var tx=db.transaction('csvs','readwrite');
+    var store=tx.objectStore('csvs');
+    Object.keys(years).forEach(function(y){store.put(JSON.stringify(years[y]),y);});
+  });
+}
+function loadCSVs(cb){
+  openDB(function(){
+    if(!db){cb();return;}
+    var store=db.transaction('csvs','readonly').objectStore('csvs');
+    var req2=store.getAllKeys();
+    req2.onsuccess=function(e){
+      var keys=e.target.result,pending=keys.length;
+      if(!pending){cb();return;}
+      var store2=db.transaction('csvs','readonly').objectStore('csvs');
+      keys.forEach(function(k){
+        store2.get(k).onsuccess=function(ev){
+          try{
+            var cards=JSON.parse(ev.target.result);
+            var ex=new Set(allCards.map(function(c){return c.front;}));
+            cards.forEach(function(c){if(!ex.has(c.front))allCards.push(c);});
+          }catch(err){}
+          if(--pending===0)cb();
+        };
+      });
+    };
+    req2.onerror=function(){cb();};
+  });
+}
+function deleteCSVYear(year){
+  openDB(function(){db.transaction('csvs','readwrite').objectStore('csvs').delete(year);});
+  allCards=allCards.filter(function(c){return c.year!==year;});
+  updateYearBar();
+  clearSession();
+  if(allCards.length)startSession();
+  else setM('<div class="dropz" id="dz"><div class="ico">📂</div>CSVをドロップ、または「CSV追加」から読み込む</div>');
+}
+
+// 画像
+function saveImg(key,dataUrl){openDB(function(){db.transaction('imgs','readwrite').objectStore('imgs').put(dataUrl,key);});}
+function deleteImg(key){
+  delete imageMap[key];
+  openDB(function(){db.transaction('imgs','readwrite').objectStore('imgs').delete(key);});
+  renderCard();
+}
+function loadAllImgs(cb){
+  openDB(function(){
+    if(!db){cb();return;}
+    var store=db.transaction('imgs','readonly').objectStore('imgs');
+    store.getAllKeys().onsuccess=function(e){
+      var keys=e.target.result,pending=keys.length;
+      if(!pending){cb();return;}
+      keys.forEach(function(k){
+        store.get(k).onsuccess=function(ev){
+          imageMap[k]=ev.target.result;
+          if(--pending===0)cb();
+        };
+      });
+    };
+  });
+}
+
+// 起動時：CSV→画像の順でロードして自動開始
+loadW();loadA();loadSession();
+loadCSVs(function(){
+  loadAllImgs(function(){
+    if(allCards.length){
+      updateYearBar();
+      if(savedSession.keys&&savedSession.keys.length&&savedSession.idx>0){
+        showResumePrompt();
+      }else{
+        startSession();
+      }
+    }
+    // allCards空ならドロップゾーンのまま
+  });
+});
+
+// ── CSV ──
+function parseCSV(text,fname){
+  var yearFromFile='不明';
+  var m1=fname.match(/令和(\d+)/),m2=fname.match(/平成(\d+)/),m3=fname.match(/[rR](\d+)/);
+  if(m1)yearFromFile='令和'+m1[1]+'年';
+  else if(m2)yearFromFile='平成'+m2[1]+'年';
+  else if(m3)yearFromFile='R'+m3[1];
+  else yearFromFile=fname.replace(/\.csv$/i,'');
+
+  var lines=text.trim().split(/\r?\n/);
+  if(!lines.length)return[];
+
+  // ヘッダー行を解析してカラム位置を取得
+  var headers=splitCSVLine(lines[0]);
+  var iFront=headers.indexOf('front');
+  var iBack=headers.indexOf('back');
+  var iSubject=headers.indexOf('subject');
+  var iYear=headers.indexOf('year');
+  // ヘッダーがない古いCSV（front,backの2列）はiFront=-1になる
+  var hasHeader=(iFront>=0&&iBack>=0);
+
+  var cards=[];
+  for(var i=hasHeader?1:0;i<lines.length;i++){
+    var line=lines[i].trim();if(!line)continue;
+    var cols=splitCSVLine(line);
+    var front,back,subject,year;
+    if(hasHeader){
+      front=cols[iFront]||'';
+      back=cols[iBack]||'';
+      subject=iSubject>=0?(cols[iSubject]||'不明'):'不明';
+      year=iYear>=0?(cols[iYear]||yearFromFile):yearFromFile;
+    }else{
+      // 旧フォーマット: front,back
+      var ci=line.indexOf(',');if(ci<0)continue;
+      front=line.slice(0,ci).replace(/^"|"$/g,'').trim();
+      back=line.slice(ci+1).replace(/^"|"$/g,'').trim();
+      subject='不明';year=yearFromFile;
+    }
+    front=front.replace(/^"|"$/g,'').trim();
+    back=back.replace(/^"|"$/g,'').trim();
+    if(front&&back)cards.push({front:front,back:back,subject:subject,year:year});
+  }
+  return cards;
+}
+
+function splitCSVLine(line){
+  // CSVの1行をフィールドに分割（ダブルクォート対応）
+  var cols=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var c=line[i];
+    if(c==='"'){inQ=!inQ;}
+    else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+    else{cur+=c;}
+  }
+  cols.push(cur.trim());
+  return cols;
+}
+
+function loadFiles(files){
+  var pending=files.length,newCards=[];
+  Array.from(files).forEach(function(f){
+    var r=new FileReader();
+    r.onload=function(ev){
+      newCards.push.apply(newCards,parseCSV(ev.target.result,f.name));
+      if(--pending===0){
+        if(!newCards.length){alert('読み込めませんでした');return;}
+        var ex=new Set(allCards.map(function(c){return c.front;}));
+        newCards.forEach(function(c){if(!ex.has(c.front))allCards.push(c);});
+        saveCSVs(); // IndexedDBに永続保存
+        updateYearBar();
+        if(savedSession.keys&&savedSession.keys.length&&savedSession.idx>0){
+          showResumePrompt();
+        }else{
+          startSession();
+        }
+      }
+    };
+    r.readAsText(f,'UTF-8');
+  });
+}
+
+document.getElementById('fi').addEventListener('change',function(e){
+  if(!e.target.files.length)return;loadFiles(e.target.files);e.target.value='';
+});
+var dz=document.getElementById('dz');
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',function(){dz.classList.remove('over');});
+dz.addEventListener('drop',function(e){
+  e.preventDefault();dz.classList.remove('over');
+  if(e.dataTransfer.files.length)loadFiles(e.dataTransfer.files);
+});
+
+// ── 再開プロンプト ──
+function showResumePrompt(){
+  var s=savedSession;
+  var yLabel=s.year==='all'?'全年度':s.year;
+  var mLabel=s.mode==='weak'?'苦手モード':'全問モード';
+  var prog=Math.round(s.idx/s.keys.length*100);
+  setM(
+    '<div class="resume-box">'+
+      '<h3>📌 途中のセッションがあります</h3>'+
+      '<p>'+esc(yLabel)+' / '+mLabel+'<br>'+
+        s.idx+' / '+s.keys.length+' 問完了（'+prog+'%）</p>'+
+      '<div class="arow">'+
+        '<button class="btn baccent" onclick="resumeSession()">続きから再開</button>'+
+        '<button class="btn bmuted" onclick="discardAndStart()">最初からやる</button>'+
+      '</div>'+
+    '</div>'
+  );
+}
+
+function resumeSession(){
+  var s=savedSession;
+  if(!s.keys||!s.keys.length){startSession();return;}
+  // keysからcardを復元
+  var map={};allCards.forEach(function(c){map[c.front]=c;});
+  var restored=[];
+  s.keys.forEach(function(k){if(map[k])restored.push(map[k]);});
+  if(!restored.length){startSession();return;}
+  mode=s.mode||'all';
+  selectedYear=s.year||'all';
+  document.getElementById('t-all').classList.toggle('on',mode==='all');
+  document.getElementById('t-weak').classList.toggle('on',mode==='weak');
+  document.getElementById('t-stats').classList.remove('on');
+  updateYearBar();
+  session=restored;
+  idx=s.idx||0;
+  answered=false;
+  renderCard();
+}
+
+function discardAndStart(){
+  clearSession();
+  startSession();
+}
+
+// ── YEAR BAR + SUBJECT BAR ──
+function updateYearBar(){
+  var bar=document.getElementById('year-bar');
+  if(mode==='stats'){bar.className='';document.getElementById('subject-bar').className='';return;}
+  var years=[];
+  allCards.forEach(function(c){if(years.indexOf(c.year)<0)years.push(c.year);});
+  if(!years.length){bar.className='';return;}
+  bar.className='visible';
+  var html='<span class="ylabel">年度</span>'+
+    '<button class="ybtn'+(selectedYear==='all'?' on':'')+'" onclick="selectYear(\'all\')">全年度</button>';
+  years.forEach(function(y){
+    var cnt=allCards.filter(function(c){return c.year===y;}).length/5|0;
+    html+='<button class="ybtn'+(selectedYear===y?' on':'')+'" onclick="selectYear(\''+esc(y)+'\')">'+esc(y)+'</button>';
+  });
+  bar.innerHTML=html;
+  updateSubjectBar();
+}
+function updateSubjectBar(){
+  var sbar=document.getElementById('subject-bar');
+  // 全年度のときは科目バー非表示
+  if(selectedYear==='all'){sbar.className='';return;}
+  // 該当年度のカードから科目一覧
+  var base=allCards.filter(function(c){return c.year===selectedYear;});
+  var subjects=[];
+  base.forEach(function(c){
+    var s=c.subject||'不明';
+    if(subjects.indexOf(s)<0)subjects.push(s);
+  });
+  if(!subjects.length){sbar.className='';return;}
+  sbar.className='visible';
+  var html='<span class="ylabel">科目</span>'+
+    '<button class="sbtn'+(selectedSubject==='all'?' on':'')+'" onclick="selectSubject(\'all\')">全問題</button>';
+  subjects.forEach(function(s){
+    var cnt=base.filter(function(c){return (c.subject||'不明')===s;}).length/5|0;
+    html+='<button class="sbtn'+(selectedSubject===s?' on':'')+'" onclick="selectSubject(\''+esc(s)+'\')">'+esc(s)+'</button>';
+  });
+  sbar.innerHTML=html;
+}
+function selectYear(y){
+  selectedYear=y;
+  selectedSubject='all'; // 年度を変えたら科目リセット
+  updateYearBar();
+  if(session.length && idx < session.length){
+    renderCard();
+  } else {
+    clearSession();startSession();
+  }
+}
+function selectSubject(s){
+  selectedSubject=s;
+  updateSubjectBar();
+  clearSession();startSession();
+}
+
+// ── SESSION ──
+function filteredCards(){
+  var cards=allCards.slice();
+  if(selectedYear!=='all') cards=cards.filter(function(c){return c.year===selectedYear;});
+  if(selectedSubject!=='all') cards=cards.filter(function(c){return (c.subject||'不明')===selectedSubject;});
+  return cards;
+}
+
+function startSession(){
+  if(mode==='weak'){
+    var wk=new Set(Object.keys(wrongMap).filter(function(k){return wrongMap[k].count>0;}));
+    session=filteredCards().filter(function(c){return wk.has(c.front);});
+    if(!session.length){
+      setM('<div class="empty"><h2>苦手リストが空です</h2><p>全問モードで解くと、間違えた問題が自動で追加されます。</p></div>');
+      return;
+    }
+  }else{
+    session=filteredCards();
+  }
+  idx=0;answered=false;
+  saveSession();
+  renderCard();
+}
+
+function switchMode(m){
+  mode=m;
+  document.getElementById('t-all').classList.toggle('on',m==='all');
+  document.getElementById('t-weak').classList.toggle('on',m==='weak');
+  document.getElementById('t-stats').classList.toggle('on',m==='stats');
+  updateYearBar();
+  if(!allCards.length){
+    if(m==='stats')setM('<div class="empty"><h2>データがありません</h2><p>CSVを読み込んで問題を解くとここに統計が表示されます。</p></div>');
+    return;
+  }
+  if(m==='stats'){
+    // 統計タブはセッションに一切触らない
+    renderStats();
+  } else if(m==='weak'){
+    // 苦手タブは常に苦手セッションを即開始
+    clearSession();startSession();
+  } else if(session.length && idx < session.length){
+    // 全問タブに戻ったとき、セッション進行中なら続きを表示
+    renderCard();
+  } else {
+    clearSession();startSession();
+  }
+}
+
+// ── RENDER CARD ──
+// sessionLog: セッション中の回答履歴 {front, result:'ok'|'wrong'}[]
+var sessionLog=[];
+
+function renderCard(){
+  if(idx>=session.length){renderDone();return;}
+  var c=session[idx];
+  var prog=(idx/session.length*100).toFixed(1);
+  var wc=Object.keys(wrongMap).filter(function(k){return wrongMap[k].count>0;}).length;
+  var yLabel=selectedYear==='all'?'全年度':selectedYear;
+  var hasImg=!!imageMap[c.front];
+
+  // すでに今セッションで回答済みかチェック
+  var prevAnswer=null;
+  for(var i=sessionLog.length-1;i>=0;i--){
+    if(sessionLog[i].front===c.front){prevAnswer=sessionLog[i].result;break;}
+  }
+
+  var imgBlock=hasImg?
+    '<div class="card-img-wrap">'+
+      '<img src="'+imageMap[c.front]+'" alt="問題図">'+
+      '<button class="img-del-btn" onclick="event.stopPropagation();deleteImg(\''+escAttr(c.front)+'\')">✕ 削除</button>'+
+    '</div>':'';
+
+  var imgAddBlock='<button class="img-add-btn" id="img-add-btn" style="display:none" onclick="attachImage()">'+
+    (hasImg?'🖼 画像を差し替える':'📷 この問題に図を追加する')+'</button>';
+
+  // 前回の回答表示バッジ
+  var prevBadge='';
+  if(prevAnswer==='ok') prevBadge='<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--ok);margin-bottom:2px;">前回: ○ 正解</div>';
+  if(prevAnswer==='wrong') prevBadge='<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--ng);margin-bottom:2px;">前回: ✗ 間違い</div>';
+
+  // 戻るボタン（最初のカードでは非表示）
+  var backBtn=idx>0?
+    '<button class="btn bmuted" style="flex:0 0 44px;padding:14px 0;font-size:18px;" onclick="goBack()">←</button>':
+    '<div style="flex:0 0 44px"></div>';
+
+  setM(
+    '<div class="sbar">'+
+      '<div class="stat">'+(idx+1)+' <span>/ '+session.length+'</span></div>'+
+      '<div class="stat ng">苦手 <span>'+wc+'問</span></div>'+
+      '<div class="stat">'+esc(yLabel)+'</div>'+
+    '</div>'+
+    '<div class="pbar"><div class="pfill" style="width:'+prog+'%"></div></div>'+
+    imgBlock+
+    '<div class="cwrap">'+
+      '<div class="card" id="card" onclick="flipCard()">'+
+        '<div class="face front">'+
+          '<div>'+
+            prevBadge+
+            '<div class="cmeta">'+esc(meta(c.front))+'</div>'+
+            '<div class="cq">'+esc(qtext(c.front))+'</div>'+
+          '</div>'+
+          '<div class="chint">タップして答えを見る</div>'+
+        '</div>'+
+        '<div class="face back">'+
+          '<div>'+verdict(c.back)+'<div class="cans">'+esc(cleanB(c.back))+'</div>'+explanation(c.back)+'</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    imgAddBlock+
+    '<div class="arow" id="AR" style="opacity:0;pointer-events:none;transition:opacity .2s">'+
+      backBtn+
+      '<button class="btn bng" onclick="markWrong()">✗ 間違い</button>'+
+      '<button class="btn bok" onclick="markOk()">○ 正解</button>'+
+    '</div>'
+  );
+  flipped=false;answered=false;
+}
+
+function flipCard(){
+  if(answered)return;
+  flipped=!flipped;
+  document.getElementById('card').classList.toggle('flip',flipped);
+  if(flipped){
+    var ar=document.getElementById('AR');ar.style.opacity='1';ar.style.pointerEvents='auto';
+    var ib=document.getElementById('img-add-btn');if(ib)ib.style.display='block';
+  }
+}
+
+// 1つ前のカードに戻る
+function goBack(){
+  if(idx<=0)return;
+  idx--;
+  // sessionLogから直前のこのカードの記録を取り消して統計を戻す
+  var k=session[idx].front;
+  // 直近のこのカードの回答を探して取り消す
+  for(var i=sessionLog.length-1;i>=0;i--){
+    if(sessionLog[i].front===k){
+      var prev=sessionLog[i].result;
+      if(prev==='wrong'){
+        if(wrongMap[k]&&wrongMap[k].count>0)wrongMap[k].count--;
+        if(answeredMap[k]&&answeredMap[k].wrong>0)answeredMap[k].wrong--;
+        saveW();
+      } else if(prev==='ok'){
+        if(answeredMap[k]&&answeredMap[k].correct>0)answeredMap[k].correct--;
+      }
+      saveA();
+      sessionLog.splice(i,1);
+      break;
+    }
+  }
+  saveSession();
+  answered=false;
+  renderCard();
+}
+
+function markWrong(){
+  if(answered)return;answered=true;
+  var k=session[idx].front;
+  if(!wrongMap[k])wrongMap[k]={count:0};wrongMap[k].count++;
+  if(!answeredMap[k])answeredMap[k]={correct:0,wrong:0};answeredMap[k].wrong++;
+  sessionLog.push({front:k,result:'wrong'});
+  saveW();saveA();
+  idx++;saveSession();
+  setTimeout(renderCard,120);
+}
+function markOk(){
+  if(answered)return;answered=true;
+  var k=session[idx].front;
+  if(!answeredMap[k])answeredMap[k]={correct:0,wrong:0};answeredMap[k].correct++;
+  sessionLog.push({front:k,result:'ok'});
+  saveA();
+  idx++;saveSession();
+  setTimeout(renderCard,120);
+}
+
+// ── IMAGE ──
+var pendingImgKey=null;
+document.getElementById('img-fi').addEventListener('change',function(e){
+  var f=e.target.files[0];if(!f||!pendingImgKey)return;
+  var r=new FileReader();
+  r.onload=function(ev){imageMap[pendingImgKey]=ev.target.result;saveImg(pendingImgKey,ev.target.result);renderCard();};
+  r.readAsDataURL(f);e.target.value='';
+});
+function attachImage(){
+  if(idx>=session.length)return;
+  pendingImgKey=session[idx].front;
+  document.getElementById('img-fi').click();
+}
+
+// ── DONE ──
+function renderDone(){
+  clearSession();
+  var wc=Object.keys(wrongMap).filter(function(k){return wrongMap[k].count>0;}).length;
+  var sc=0,sw=0;
+  session.forEach(function(c){var a=answeredMap[c.front];if(a){sc+=a.correct||0;sw+=a.wrong||0;}});
+  var sr=sc+sw>0?Math.round(sc/(sc+sw)*100)+'%':'--';
+  setM(
+    '<div class="done">'+
+      '<div class="big">'+sr+'</div>'+
+      '<h2>セッション完了</h2>'+
+      '<p>正解 '+sc+' / 不正解 '+sw+'　|　累計苦手 <strong style="color:var(--ng)">'+wc+'問</strong></p>'+
+      '<div class="arow">'+
+        '<button class="btn bmuted" onclick="discardAndStart()">もう一度</button>'+
+        '<button class="btn bng" onclick="switchMode(\'weak\')">苦手だけやる</button>'+
+      '</div>'+
+      '<div class="arow" style="margin-top:8px">'+
+        '<button class="btn bmuted" onclick="switchMode(\'stats\')">📊 統計を見る</button>'+
+      '</div>'+
+    '</div>'
+  );
+}
+
+// ── WEAK VIEW ──
+function renderWeakView(){
+  var base=filteredCards();
+  var wc=base.filter(function(c){return wrongMap[c.front]&&wrongMap[c.front].count>0;});
+  if(!wc.length){
+    setM('<div class="empty"><h2>苦手リストが空です</h2><p>全問モードで解くと、間違えた問題が自動でここに追加されます。</p></div>');
+    return;
+  }
+  wc.sort(function(a,b){return (wrongMap[b.front]?wrongMap[b.front].count:0)-(wrongMap[a.front]?wrongMap[a.front].count:0);});
+  var items=wc.map(function(c){
+    var cnt=wrongMap[c.front]?wrongMap[c.front].count:0;
+    return '<div class="witem">'+
+      '<div><span style="font-size:10px;color:var(--muted);font-family:\'DM Mono\',monospace">'+
+        esc(c.year)+' / '+esc(meta(c.front))+(imageMap[c.front]?' 🖼':'')+
+      '</span><br>'+esc(qtext(c.front))+'</div>'+
+      '<div class="wcnt">'+cnt+'回ミス</div>'+
+    '</div>';
+  }).join('');
+  setM(
+    '<div class="stitle">WEAK_LIST // '+wc.length+' items'+(selectedYear!=='all'?' // '+esc(selectedYear):'')+' </div>'+
+    '<div class="arow">'+
+      '<button class="btn bng" onclick="startSession()">苦手を順番に復習</button>'+
+      '<button class="btn bmuted" onclick="clearWeak()">リセット</button>'+
+    '</div>'+
+    '<div class="wlist">'+items+'</div>'
+  );
+}
+function clearWeak(){
+  if(!confirm('苦手リストをリセットしますか？'))return;
+  wrongMap={};saveW();
+  startSession();
+}
+
+// ── STATS ──
+function rateInfo(r){
+  if(r<0)return{cls:'none',label:'--'};
+  if(r>=80)return{cls:'good',label:r+'%'};
+  if(r>=50)return{cls:'mid',label:r+'%'};
+  return{cls:'bad',label:r+'%'};
+}
+function calcStats(cards){
+  var total=cards.length,attempted=0,correctTotal=0,wrongTotal=0,weakCount=0;
+  cards.forEach(function(c){
+    var a=answeredMap[c.front],w=wrongMap[c.front];
+    if(a){attempted++;correctTotal+=a.correct||0;wrongTotal+=a.wrong||0;}
+    if(w&&w.count>0)weakCount++;
+  });
+  var answered=correctTotal+wrongTotal;
+  var rate=answered>0?Math.round(correctTotal/answered*100):-1;
+  return{total:total,attempted:attempted,correctTotal:correctTotal,wrongTotal:wrongTotal,weakCount:weakCount,rate:rate};
+}
+
+function renderStats(){
+  var years=[];
+  allCards.forEach(function(c){if(years.indexOf(c.year)<0)years.push(c.year);});
+  var overall=calcStats(allCards);
+  var ori=rateInfo(overall.rate);
+
+  var html=
+    '<div class="stats-wrap">'+
+    '<div class="stats-section-title">OVERALL</div>'+
+    '<div class="stat-overview">'+
+      '<div class="stat-box s-accent"><div class="val">'+overall.attempted+'</div><div class="lbl">解答済み</div></div>'+
+      '<div class="stat-box s-ok"><div class="val">'+ori.label+'</div><div class="lbl">全体正答率</div></div>'+
+      '<div class="stat-box s-ng"><div class="val">'+overall.weakCount+'</div><div class="lbl">苦手問題</div></div>'+
+    '</div>'+
+    '<div class="stats-section-title">PER YEAR</div>';
+
+  if(!years.length){
+    html+='<div style="color:var(--muted);font-size:13px;padding:10px 0">CSVを読み込むと年度別統計が表示されます</div>';
+  }else{
+    html+=
+      '<table class="year-table">'+
+      '<thead><tr>'+
+        '<th>年度</th>'+
+        '<th>正答率</th>'+
+        '<th>正解</th>'+
+        '<th>不正解</th>'+
+        '<th>苦手</th>'+
+        '<th>問題数</th>'+
+        '<th></th>'+
+      '</tr></thead><tbody>';
+
+    years.forEach(function(y){
+      var cards=allCards.filter(function(c){return c.year===y;});
+      var s=calcStats(cards);
+      var ri=rateInfo(s.rate);
+      var fillW=s.rate>=0?s.rate:0;
+      html+=
+        '<tr>'+
+          '<td>'+esc(y)+'</td>'+
+          '<td>'+
+            '<span class="mini-bar"><span class="mini-fill bg-'+ri.cls+'" style="width:'+fillW+'%"></span></span>'+
+            '<span class="c-'+ri.cls+'">'+ri.label+'</span>'+
+          '</td>'+
+          '<td class="c-good">'+s.correctTotal+'</td>'+
+          '<td class="c-bad">'+s.wrongTotal+'</td>'+
+          '<td class="c-bad">'+s.weakCount+'</td>'+
+          '<td>'+s.total+'</td>'+
+          '<td><button style="background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px;" onclick="confirmDeleteYear(\''+escAttr(y)+'\')">✕</button></td>'+
+        '</tr>';
+    });
+    html+='</tbody></table>';
+  }
+
+  html+=
+    '<div class="stats-section-title">BACKUP</div>'+
+    '<div class="arow">'+
+      '<button class="btn baccent" onclick="exportData()">⬇ エクスポート</button>'+
+      '<button class="btn bmuted" onclick="document.getElementById(\'import-fi\').click()">⬆ インポート</button>'+
+    '</div>'+
+    '<div style="font-size:11px;color:var(--muted);line-height:1.7;padding:2px 0">'+
+      'エクスポート：苦手リスト・統計・画像をJSONに保存<br>'+
+      'インポート：別端末・別ブラウザに丸ごと復元'+
+    '</div>'+
+    '<div class="arow" style="margin-top:4px">'+
+      '<button class="btn bmuted" onclick="resetStats()">統計をリセット</button>'+
+    '</div>'+
+    '</div>';
+  setM(html);
+}
+
+function confirmDeleteYear(year){
+  if(!confirm(year+'のデータを削除しますか？\n（統計・苦手リストからも除外されます）'))return;
+  deleteCSVYear(year);
+  renderStats();
+}
+
+function resetStats(){
+  if(!confirm('統計（正解・不正解の履歴と苦手リスト）をリセットしますか？'))return;
+  answeredMap={};wrongMap={};saveA();saveW();
+  renderStats();
+}
+
+// ── EXPORT / IMPORT ──
+function exportData(){
+  // 画像含め全データをJSONに書き出す
+  var data={
+    version:1,
+    exportedAt:new Date().toISOString(),
+    wrongMap:wrongMap,
+    answeredMap:answeredMap,
+    imageMap:imageMap
+  };
+  var json=JSON.stringify(data);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  var d=new Date();
+  var fname='atflash_backup_'+d.getFullYear()+(d.getMonth()+1+'').padStart(2,'0')+d.getDate()+'.json';
+  a.download=fname;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('import-fi').addEventListener('change',function(e){
+  var f=e.target.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(ev){
+    try{
+      var data=JSON.parse(ev.target.result);
+      if(!data.version){throw new Error('invalid');}
+      if(!confirm('インポートすると現在の苦手リスト・統計・画像が上書きされます。続けますか？'))return;
+      // wrongMap
+      if(data.wrongMap){
+        wrongMap=data.wrongMap;saveW();
+      }
+      // answeredMap
+      if(data.answeredMap){
+        answeredMap=data.answeredMap;saveA();
+      }
+      // imageMap + IndexedDB
+      if(data.imageMap){
+        imageMap=data.imageMap;
+        openDB(function(){
+          var tx=db.transaction('imgs','readwrite');
+          var store=tx.objectStore('imgs');
+          Object.keys(imageMap).forEach(function(k){store.put(imageMap[k],k);});
+        });
+      }
+      alert('インポート完了しました！');
+      if(mode==='stats')renderStats();
+    }catch(err){
+      alert('ファイルが正しくありません。');
+    }
+  };
+  r.readAsText(f,'UTF-8');
+  e.target.value='';
+});
+
+// ── HELPERS ──
+function setM(h){document.getElementById('M').innerHTML=h;}
+function meta(f){var m=f.match(/^【(.+?)】/);return m?m[1]:'';}
+function qtext(f){return f.replace(/^【.+?】/,'').trim();}
+function cleanB(b){return b.replace(/\[cite:[\s\S]*?\]/g,'').trim();}
+function verdict(b){
+  if(/【誤り|正解の選択肢/.test(b))return '<div class="verdict vng">✗ 誤り</div>';
+  if(/【正しい|【正解/.test(b))return '<div class="verdict vok">○ 正しい</div>';
+  return '';
+}
+function explanation(b){
+  // 【...】の後のテキストを解説として表示
+  var m=b.match(/【[^】]+】\s*(.+)/s);
+  if(!m||!m[1].trim())return '';
+  var txt=m[1].trim();
+  // ✓と✗を色付き表示
+  txt=txt.replace(/✓([^\/]+)/g,'<span style="color:var(--ok)">✓$1</span>');
+  txt=txt.replace(/✗([^\/]+)/g,'<span style="color:var(--ng)">✗$1</span>');
+  txt=txt.replace(/\s*\/\s*/g,'<br>');
+  return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;line-height:1.8;color:var(--muted)">'+txt+'</div>';
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>
